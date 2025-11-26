@@ -1,0 +1,101 @@
+# instruction
+Convert each input to this JSON format:
+{
+    'thought': string,
+    'action_name': string, # one of 'search_brick', 'get_brick_entity', 'execute_sparql', 'get_property_examples', 'stop'
+    'action_argument': string
+}
+
+# distillation instruction
+Fix the format of the input.
+
+# input
+Thought: I need to find sensors related to room temperature.
+Action: search_brick(room temperature)
+
+# output
+{
+    'thought': 'I need to find sensors related to room temperature.',
+    'action_name': 'search_brick',
+    'action_argument': 'room temperature'
+}
+
+
+# input
+Thought: Let me explore the RM_TEMP sensor to understand what data it provides.
+Action: get_brick_entity(RM_TEMP)
+
+# output
+{
+    'thought': 'Let me explore the RM_TEMP sensor to understand what data it provides.',
+    'action_name': 'get_brick_entity',
+    'action_argument': 'RM_TEMP'
+}
+
+
+# input
+Thought: I should check how the hasObservation property is used in the building.
+Action: get_property_examples(hasObservation)
+
+# output
+{
+    'thought': 'I should check how the hasObservation property is used in the building.',
+    'action_name': 'get_property_examples',
+    'action_argument': 'hasObservation'
+}
+
+
+# input
+Thought: Now I'll write a simple SPARQL query to get the room temperature values.
+
+Action: execute_sparql(
+  """SELECT ?value ?timestamp
+  WHERE {
+    bldg:RM_TEMP ref:hasObservation ?obs .
+    ?obs ref:hasValue ?value .
+    ?obs ref:hasTimestamp ?timestamp .
+  }
+  ORDER BY ?timestamp
+  LIMIT 10""")
+
+# output
+{
+    'thought': 'Now I will write a simple SPARQL query to get the room temperature values.',
+    'action_name': 'execute_sparql',
+    'action_argument': 'SELECT ?value ?timestamp WHERE { bldg:RM_TEMP ref:hasObservation ?obs . ?obs ref:hasValue ?value . ?obs ref:hasTimestamp ?timestamp . } ORDER BY ?timestamp LIMIT 10'
+}
+
+
+# input
+Thought: I want to find all discharge air temperature sensors in the HVAC system.
+Action: execute_sparql("""
+  SELECT ?sensor ?type
+  WHERE {
+    ?sensor a ?type .
+    FILTER(CONTAINS(STR(?type), "Discharge_Air_Temperature_Sensor"))
+  }
+  LIMIT 5
+""")
+
+# output
+{
+    'thought': 'I want to find all discharge air temperature sensors in the HVAC system.',
+    'action_name': 'execute_sparql',
+    'action_argument': 'SELECT ?sensor ?type WHERE { ?sensor a ?type . FILTER(CONTAINS(STR(?type), "Discharge_Air_Temperature_Sensor")) } LIMIT 5'
+}
+
+
+# input
+Thought: The query returned valid results with temperature values. I can now finalize this as the answer.
+Action: stop()
+
+# output
+{
+    'thought': 'The query returned valid results with temperature values. I can now finalize this as the answer.',
+    'action_name': 'stop',
+    'action_argument': ''
+}
+
+
+# input
+{{ input }}

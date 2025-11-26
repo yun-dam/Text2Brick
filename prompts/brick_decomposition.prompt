@@ -1,0 +1,212 @@
+# instruction
+Your task is to decompose a natural language question about building sensor data into structured components that will help generate a SPARQL query.
+
+Analyze the user question and extract:
+
+1. **Sensors/Entities**: List all sensors, equipment, or points mentioned or implied
+   - Extract both explicit mentions (e.g., "room temperature", "FCU_OAT")
+   - Infer implicit sensors based on context (e.g., "cooling valve" → FCU_CVLV)
+   - Count how many distinct sensors are being queried
+
+2. **Temporal Constraints**: Identify any time-related requirements
+   - **Type**: latest/current, specific date/time, date range, time period, trend/history
+   - **Details**: Extract specific values (dates, times, durations)
+   - **SPARQL Filter**: How to express this as a FILTER clause if needed
+
+3. **Aggregation/Analysis**: Identify any computational requirements
+   - Statistical operations (MIN, MAX, AVG, COUNT)
+   - Comparisons or conditions
+   - Grouping requirements
+
+Available sensors in this dataset (LBNL FDD FCU):
+- FCU_CTRL: FCU control mode
+- FAN_CTRL: Fan control mode
+- RM_TEMP: Room temperature
+- RMCLGSPT: Room cooling setpoint
+- RMHTGSPT: Room heating setpoint
+- FCU_MAT: Mixed air temperature
+- FCU_DAT: Discharge air temperature
+- FCU_RAT: Return air temperature
+- FCU_OAT: Outdoor air temperature
+- FCU_CVLV: Cooling valve position
+- FCU_CVLV_DM: Cooling valve command
+- FCU_HVLV: Heating valve position
+- FCU_HVLV_DM: Heating valve command
+- FCU_CLG_GPM: Cooling water flow
+- FCU_CLG_EWT: Cooling entering water temp
+- FCU_CLG_RWT: Cooling return water temp
+- FCU_HTG_GPM: Heating water flow
+- FCU_HTG_EWT: Heating entering water temp
+- FCU_HTG_RWT: Heating return water temp
+- FCU_DA_CFM: Discharge air flow
+- FCU_OA_CFM: Outdoor air flow
+- FCU_DMPR: Damper position
+- FCU_DMPR_DM: Damper command
+- FCU_SPD: Fan speed
+- FCU_WAT: Fan power
+- FCU_MA_HUMD: Mixed air humidity
+- FCU_OA_HUMD: Outdoor air humidity
+- FCU_DA_HUMD: Discharge air humidity
+- FCU_RA_HUMD: Return air humidity
+
+Common aliases and synonyms:
+- "room temperature" → RM_TEMP
+- "outdoor temperature" → FCU_OAT
+- "discharge temperature", "supply air temperature" → FCU_DAT
+- "cooling valve", "chilled water valve" → FCU_CVLV
+- "heating valve", "hot water valve" → FCU_HVLV
+- "fan speed" → FCU_SPD
+- "damper position", "outdoor air damper" → FCU_DMPR
+
+Temporal keyword mapping:
+- "latest", "most recent", "current", "now" → Type: latest, SPARQL: ORDER BY DESC(?timestamp) LIMIT 1
+- "last N", "recent N", "N latest" → Type: recent_n, SPARQL: ORDER BY DESC(?timestamp) LIMIT N
+- "first N", "oldest N" → Type: oldest_n, SPARQL: ORDER BY ?timestamp LIMIT N
+- "over time", "trend", "history" → Type: trend, SPARQL: ORDER BY ?timestamp LIMIT 100
+- "between X and Y", "from X to Y" → Type: range, SPARQL: FILTER(?timestamp >= "X" && ?timestamp <= "Y")
+- "on [date]", "at [time]" → Type: specific, SPARQL: FILTER(CONTAINS(?timestamp, "date/time"))
+- "during [period]" → Type: period, SPARQL: FILTER with appropriate bounds
+
+Timestamp format in dataset: "MM/DD/YYYY HH:MM" (e.g., "12/31/2018 23:59")
+Dataset date range: 01/01/2018 00:00 to 12/31/2018 23:59
+
+# output format
+Return a JSON object with the following structure:
+
+```json
+{
+  "sensors": [
+    {
+      "mention": "original text from question",
+      "sensor_id": "FCU_XXX or RM_TEMP",
+      "description": "what this sensor measures"
+    }
+  ],
+  "sensor_count": <number>,
+  "temporal": {
+    "has_constraint": <true/false>,
+    "type": "latest|recent_n|oldest_n|range|specific|period|trend|none",
+    "details": {
+      "limit": <number if applicable>,
+      "start_date": "MM/DD/YYYY HH:MM" <if applicable>,
+      "end_date": "MM/DD/YYYY HH:MM" <if applicable>,
+      "specific_time": "MM/DD/YYYY HH:MM" <if applicable>
+    },
+    "sparql_pattern": "ORDER BY ... LIMIT N or FILTER(...)"
+  },
+  "aggregation": {
+    "required": <true/false>,
+    "operations": ["MIN", "MAX", "AVG", "COUNT"],
+    "conditions": ["description of any FILTER conditions besides temporal"]
+  },
+  "query_intent": "brief description of what the user wants to know"
+}
+```
+
+# examples
+
+Example 1:
+Input: "What is the latest room temperature?"
+Output:
+```json
+{
+  "sensors": [
+    {"mention": "room temperature", "sensor_id": "RM_TEMP", "description": "Room air temperature"}
+  ],
+  "sensor_count": 1,
+  "temporal": {
+    "has_constraint": true,
+    "type": "latest",
+    "details": {"limit": 1},
+    "sparql_pattern": "ORDER BY DESC(?timestamp) LIMIT 1"
+  },
+  "aggregation": {
+    "required": false,
+    "operations": [],
+    "conditions": []
+  },
+  "query_intent": "Get the most recent room temperature reading"
+}
+```
+
+Example 2:
+Input: "Show me the cooling and heating valve positions on 12/15/2018"
+Output:
+```json
+{
+  "sensors": [
+    {"mention": "cooling valve", "sensor_id": "FCU_CVLV", "description": "Cooling coil valve position"},
+    {"mention": "heating valve", "sensor_id": "FCU_HVLV", "description": "Heating coil valve position"}
+  ],
+  "sensor_count": 2,
+  "temporal": {
+    "has_constraint": true,
+    "type": "specific",
+    "details": {"specific_time": "12/15/2018"},
+    "sparql_pattern": "FILTER(CONTAINS(?timestamp, \"12/15/2018\"))"
+  },
+  "aggregation": {
+    "required": false,
+    "operations": [],
+    "conditions": []
+  },
+  "query_intent": "Get cooling and heating valve positions for a specific date"
+}
+```
+
+Example 3:
+Input: "What was the average outdoor temperature between 06/01/2018 and 06/30/2018?"
+Output:
+```json
+{
+  "sensors": [
+    {"mention": "outdoor temperature", "sensor_id": "FCU_OAT", "description": "Outdoor air temperature"}
+  ],
+  "sensor_count": 1,
+  "temporal": {
+    "has_constraint": true,
+    "type": "range",
+    "details": {
+      "start_date": "06/01/2018 00:00",
+      "end_date": "06/30/2018 23:59"
+    },
+    "sparql_pattern": "FILTER(?timestamp >= \"06/01/2018 00:00\" && ?timestamp <= \"06/30/2018 23:59\")"
+  },
+  "aggregation": {
+    "required": true,
+    "operations": ["AVG"],
+    "conditions": []
+  },
+  "query_intent": "Calculate average outdoor temperature for a date range"
+}
+```
+
+Example 4:
+Input: "Show me room temperature over time"
+Output:
+```json
+{
+  "sensors": [
+    {"mention": "room temperature", "sensor_id": "RM_TEMP", "description": "Room air temperature"}
+  ],
+  "sensor_count": 1,
+  "temporal": {
+    "has_constraint": true,
+    "type": "trend",
+    "details": {"limit": 100},
+    "sparql_pattern": "ORDER BY ?timestamp LIMIT 100"
+  },
+  "aggregation": {
+    "required": false,
+    "operations": [],
+    "conditions": []
+  },
+  "query_intent": "View room temperature trend over time"
+}
+```
+
+# input
+User Question: {{ question }}
+
+# output
+Return only the JSON object, no additional text.

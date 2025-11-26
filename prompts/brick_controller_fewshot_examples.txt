@@ -1,0 +1,199 @@
+Below are few-shot Text-to-SPARQL samples for the Brick dataset.
+
+Sample 1 (Latest Value)
+Question: What is the latest reading for FCU fan speed?
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_SPD ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+}
+ORDER BY DESC(?timestamp)
+LIMIT 1
+
+Sample 2 (Recent History, Limit N)
+Question: Show me the 5 most recent FCU return air temperatures
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_RAT ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+}
+ORDER BY DESC(?timestamp)
+LIMIT 5
+
+Sample 3 (Specific Timestamp)
+Question: Get the FCU control modes on December 15th at 2:30 pm?
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_CTRL ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+  FILTER(?timestamp >= "2018-12-15T14:30:00"^^xsd:dateTime && ?timestamp < "2018-12-15T14:31:00"^^xsd:dateTime)
+}
+LIMIT 1
+
+Sample 4 (Time range)
+Question: What was the discharge air flow rate between 9 am and 12 pm on December 1st?
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_DA_CFM ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+  FILTER(?timestamp >= "2018-12-01T09:00:00"^^xsd:dateTime && ?timestamp < "2018-12-01T12:00:00"^^xsd:dateTime)
+}
+ORDER BY ?timestamp
+
+
+Sample 5 (Multi-Sensor Snapshot, modes)
+Question: Show me the FCU control mode and fan operation mode for the last 10 readings
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?sensor ?value
+WHERE {
+  {
+    SELECT ?timestamp ?value ("FCU_CTRL" AS ?sensor)
+    WHERE {
+      bldg:FCU_CTRL ref:hasObservation ?obs .
+      ?obs ref:hasTimestamp ?timestamp .
+      ?obs ref:hasValue ?value .
+    }
+    ORDER BY DESC(?timestamp)
+    LIMIT 10
+  }
+  UNION
+  {
+    SELECT ?timestamp ?value ("FAN_CTRL" AS ?sensor)
+    WHERE {
+      bldg:FAN_CTRL ref:hasObservation ?obs .
+      ?obs ref:hasTimestamp ?timestamp .
+      ?obs ref:hasValue ?value .
+    }
+    ORDER BY DESC(?timestamp)
+    LIMIT 10
+  }
+}
+ORDER BY DESC(?timestamp)
+
+Sample 6 (Multi-sensor at specific time)
+Question: What were the cooling coil entering and return water temperatures on December 20th at 4 pm?
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?sensor ?value
+WHERE {
+  {
+    bldg:FCU_CLG_EWT ref:hasObservation ?obs .
+    ?obs ref:hasTimestamp ?timestamp .
+    ?obs ref:hasValue ?value .
+    BIND("FCU_CLG_EWT" AS ?sensor)
+    FILTER(?timestamp >= "2018-12-20T16:00:00"^^xsd:dateTime && ?timestamp < "2018-12-20T16:01:00"^^xsd:dateTime)
+  }
+  UNION
+  {
+    bldg:FCU_CLG_RWT ref:hasObservation ?obs .
+    ?obs ref:hasTimestamp ?timestamp .
+    ?obs ref:hasValue ?value .
+    BIND("FCU_CLG_RWT" AS ?sensor)
+    FILTER(?timestamp >= "2018-12-20T16:00:00"^^xsd:dateTime && ?timestamp < "2018-12-20T16:01:00"^^xsd:dateTime)
+  }
+}
+ORDER BY ?timestamp
+
+Sample 7 (whole day data)
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_MAT ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+  FILTER(?timestamp >= "2018-12-05T00:00:00"^^xsd:dateTime && ?timestamp <= "2018-12-05T23:59:59"^^xsd:dateTime)
+}
+ORDER BY ASC(?timestamp)
+}
+
+Sample 8 (trend)
+Question: Display the trend of FCU discharge air temperature over the last 50 measurements.
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_DAT ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+}
+ORDER BY DESC(?timestamp)
+LIMIT 50
+
+Sample 9 (Setpoint at specific time)
+Question: What is the Room cooling setpoint temperature on December 10th at 5 pm
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:RMCLGSPT ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+  FILTER(?timestamp >= "2018-12-10T17:00:00"^^xsd:dateTime && ?timestamp < "2018-12-10T17:01:00"^^xsd:dateTime)
+}
+
+Sample 10 (first/oldest readings)
+Question: Show me the first 10 return air temperature readings.
+Answer (SPARQL):
+PREFIX brick: <https://brickschema.org/schema/Brick#>
+PREFIX bldg: <bldg-59#>
+PREFIX ref: <https://brickschema.org/schema/Brick/ref#>
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+SELECT ?timestamp ?value
+WHERE {
+  bldg:FCU_RAT ref:hasObservation ?obs .
+  ?obs ref:hasTimestamp ?timestamp .
+  ?obs ref:hasValue ?value .
+}
+ORDER BY ASC(?timestamp)
+LIMIT 10
+

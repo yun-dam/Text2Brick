@@ -1,0 +1,161 @@
+# instruction
+Your task is to write a Brick Schema SPARQL query to answer the given question about building data. Follow a step-by-step process:
+
+1. Start by constructing very simple fragments of the SPARQL query.
+2. Execute each fragment to verify its correctness. Adjust as needed based on your observations.
+3. Confirm all your assumptions about the Brick schema structure before proceeding.
+4. Gradually build the complete SPARQL query by adding one piece at a time.
+5. Do NOT repeat the same action, as the results will be the same.
+6. The question is about building sensors, equipment, or timeseries data, so continue until you find it.
+7. For timeseries data, remember to use ref:hasObservation, ref:hasValue, and ref:hasTimestamp properties.
+8. In the final SPARQL projections, select the actual values needed to answer the question.
+
+Form exactly one "Thought" and perform exactly one "Action", then wait for the "Observation".
+
+Possible actions are:
+
+- search_brick(string): Searches Brick schema for sensors, equipment, or points matching the given string.
+- get_brick_entity(entity_id): Retrieves all properties and relationships of a specified Brick entity (e.g., RM_TEMP, FCU_OAT).
+- get_property_examples(property_name): Provides examples demonstrating the use of a specific property (e.g., hasObservation, feeds).
+- execute_sparql(SPARQL): Runs a SPARQL query on the Brick graph and returns results.
+  CRITICAL: EVERY SPARQL query MUST start with PREFIX declarations (brick:, bldg:, ref:, xsd:)
+  If you forget PREFIX declarations, the query will fail with a PREFIX error.
+- stop(): Marks the last executed SPARQL query as the final answer and ends the process.
+
+Key Brick Schema patterns:
+- Sensors have observations: ?sensor ref:hasObservation ?obs
+- Observations have values: ?obs ref:hasValue ?value
+- Observations have timestamps: ?obs ref:hasTimestamp ?timestamp
+- Timestamps are xsd:dateTime type (format: "2018-12-28T14:00:00"^^xsd:dateTime)
+  CRITICAL: Do NOT add timezone 'Z' suffix. Use "2018-12-28T14:00:00" NOT "2018-12-28T14:00:00Z"
+- Entity types use brick: namespace (e.g., brick:Temperature_Sensor)
+- Building entities use bldg: namespace (e.g., bldg:RM_TEMP)
+
+About this dataset (LBNL FDD FCU Data):
+This dataset contains Fan Coil Unit (FCU) sensor data from LBNL Fault Detection and Diagnostics research.
+
+Conventions:
+
+0–1 signals mean 0.0 = fully closed/off, 1.0 = fully open/on. Many systems also scale these to 0–100%.
+Airflow is in CFM. Water flow is in GPM. Temperatures are in °F. Humidity is %RH.
+Discharge air = supply air leaving the FCU. Return air = room air returning to the FCU. Mixed air = blend of return air and outdoor air upstream of the coil(s).
+Points
+
+FCU_CTRL: FCU overall operating mode selector. Enumerated value:
+
+0 = Shutdown (unit off; fan stopped; valves and dampers typically closed; no heating/cooling demand is acted upon).
+1 = Operate (normal, occupied control; fan and coils operate as needed to meet room setpoints).
+2 = Setback (unoccupied/energy-saving mode; widened deadband; heating setpoint lowered and cooling setpoint raised; ventilation may be reduced). This is a supervisory mode that gates all other controls.
+
+FAN_CTRL: Fan operation mode command from BAS.
+
+1 = Auto (fan runs when there is a call for heating/cooling or ventilation; may cycle off in deadband).
+2 = Off (fan is forced off regardless of demand). Note: Some systems also support “On/Continuous” as a separate value even if not shown here; in Auto, the fan follows thermal/ventilation demand.
+
+All sensors available:
+
+FCU_SPD: Fan speed measurement (mechanical rotational speed in rev/s, or sometimes scaled to percent if derived from a VFD). Indicates how fast the fan is actually turning. Used to infer airflow and detect fan or belt issues. If discrete multi-speed FCUs are used, this may reflect one of several fixed speeds.
+
+FCU_WAT: Fan power consumption in Watts. Electrical power drawn by the fan motor. Useful for energy calculations, performance verification, and detecting abnormal loads for a given speed/airflow.
+
+RM_TEMP: Room (zone) air temperature measured in the occupied space, in °F. Primary controlled variable for thermal comfort; used against the heating and cooling setpoints to determine demand.
+
+RMCLGSPT: Room cooling setpoint, in °F. Upper bound of the comfort band. When RM_TEMP exceeds this value (plus any control differential), the FCU will generate a cooling demand (open cooling valve, run fan, etc.).
+
+RMHTGSPT: Room heating setpoint, in °F. Lower bound of the comfort band. When RM_TEMP falls below this value (minus any control differential), the FCU will generate a heating demand (open heating valve, run fan, etc.).
+
+FCU_MAT: Mixed air temperature in °F, measured upstream of the coil(s) where outdoor air and return air are mixed. Used to manage economizer-like strategies (if present) and to ensure coil entering air conditions are within expected ranges. In small FCUs without a mixing box, this may be equivalent to return air temperature.
+
+FCU_DAT: Discharge (supply) air temperature in °F, measured downstream of the coil(s) and fan, as air leaves the FCU into the room or ductwork. Controlled indirectly by valve positions and fan operation. Often has its own safety limits to prevent supply of excessively hot/cold air.
+
+FCU_RAT: Return air temperature in °F, measured at the return inlet from the zone to the FCU. Reflects zone conditions averaged over the return path; may lag behind RM_TEMP depending on sensor location.
+
+FCU_OAT: Outdoor air temperature in °F at or near the FCU’s outdoor air intake. Used for ventilation control and to avoid drawing in extremely hot/cold air when unnecessary.
+
+FCU_MA_HUMD: Mixed air relative humidity in %RH at the mixing section. Useful for condensation risk and dehumidification strategies if the coil is actively cooling.
+
+FCU_OA_HUMD: Outdoor air relative humidity in %RH at the intake. Helps determine latent load implications when bringing in ventilation air.
+
+FCU_DA_HUMD: Discharge (supply) air relative humidity in %RH leaving the FCU. Indicates whether the coil is dehumidifying (lower %RH) or, in some cases, if humidification is occurring (higher %RH).
+
+FCU_RA_HUMD: Return air relative humidity in %RH from the room back to the FCU. Often representative of room humidity for single-zone FCUs.
+
+FCU_DA_CFM: Discharge (supply) air flow rate in CFM. Measured directly via airflow sensor or inferred from fan speed/VFD signal and a calibrated fan curve. Used for ventilation compliance, comfort, and diagnostics (e.g., verifying that commanded speed yields expected flow).
+
+FCU_OA_CFM: Outdoor air flow rate in CFM entering the FCU. Indicates ventilation quantity; used for indoor air quality compliance and in economizer logic. Often measured with a differential pressure-based airflow station or estimated from damper position and known k-factors.
+
+FCU_DMPR: Mixed/outdoor air damper position feedback (0–1). Physical position of the damper blade(s), where 0 is fully closed to outdoor air and 1 is fully open. Feedback from the actuator or potentiometer; may differ from the commanded signal if there is a fault or obstruction.
+
+FCU_DMPR_DM: Mixed/outdoor air damper control signal (command) from BAS (0–1). The analog output sent to the damper actuator. 0 means “command closed,” 1 means “command open.” Compare with FCU_DMPR to detect tracking errors or failed actuators.
+
+FCU_CVLV: Cooling coil valve position feedback (0–1). Actual opening of the chilled water valve serving the cooling coil. 0 is closed, 1 is fully open. If two-position valves are used, it may jump between 0 and 1; with modulating valves, it varies continuously.
+
+FCU_CVLV_DM: Cooling coil valve control signal (command) from BAS (0–1). The analog output requesting a certain valve opening. Used to regulate discharge air temperature and meet cooling demand. Compare with FCU_CVLV to identify valve or linkage issues.
+
+FCU_CLG_GPM: Cooling coil water flow rate in GPM. Measured or inferred flow of chilled (or cool) water through the cooling coil. Higher flow increases cooling capacity up to coil limits. Used with EWT/RWT to compute cooling capacity and to detect fouled coils or closed valves.
+
+FCU_CLG_EWT: Cooling coil entering water temperature in °F. Temperature of the water entering the cooling coil from the chilled water loop. Typical values might be 42–56°F depending on plant staging. Lower EWT increases potential cooling capacity.
+
+FCU_CLG_RWT: Cooling coil return water temperature in °F. Temperature of water leaving the cooling coil back to the loop. The difference (RWT − EWT) indicates heat absorbed from the air stream; combined with flow, it gives sensible cooling capacity.
+
+FCU_HVLV: Heating coil valve position feedback (0–1). Actual opening of the hot water (or heating medium) valve serving the heating coil. 0 is closed, 1 is fully open.
+
+FCU_HVLV_DM: Heating coil valve control signal (command) from BAS (0–1). The analog output requesting a certain heating valve opening. Used to increase discharge air temperature and meet heating demand.
+
+FCU_HTG_GPM: Heating coil water flow rate in GPM. Measured or inferred flow of hot water through the heating coil. Used with EWT/RWT to compute heating capacity and diagnose issues like air in the coil or closed valves.
+
+FCU_HTG_EWT: Heating coil entering water temperature in °F. Temperature of the hot water entering the heating coil from the hot water loop. Typical values might be 120–180°F depending on system design. Higher EWT increases potential heating capacity.
+
+FCU_HTG_RWT: Heating coil return water temperature in °F. Temperature of water leaving the heating coil back to the loop. The difference (EWT − RWT) indicates heat delivered to the air stream; combined with flow, it gives sensible heating capacity.
+
+How these points are used in control and diagnostics:
+
+Setpoints and RM_TEMP define a deadband. Cooling is called when RM_TEMP > RMCLGSPT; heating when RM_TEMP < RMHTGSPT; within the deadband, FAN_CTRL in Auto may allow the fan to cycle off.
+Valve and damper “_DM” points are commands; “position” points are feedback. Command/feedback mismatches indicate actuator or linkage faults.
+EWT/RWT with GPM quantify coil capacities; abnormal delta-T (too low or too high) can indicate fouling, air in the coil, low flow, or sensor errors.
+DAT is constrained by safety limits (e.g., minimum supply air temperature in cooling to prevent condensation, maximum in heating to avoid overheating). The BAS modulates valves to keep DAT within desired bounds while satisfying RM_TEMP.
+MA/OA/RA/DA humidity and temperature points support ventilation control, condensation avoidance, and dehumidification logic. Outdoor air damper: Maintains a minimum 30% position.
+
+# distillation instruction
+Think and perform the next action.
+
+CRITICAL OUTPUT FORMAT:
+You MUST respond in EXACTLY this format (no variations):
+
+Thought: <your reasoning in one paragraph>
+Action: <action_name>(<argument>)
+
+Rules:
+- Do NOT use markdown formatting (no **bold**, no `code blocks`, no ```sparql```)
+- Do NOT include multiple Thought/Action pairs (only ONE of each)
+- Do NOT include "Observation:" in your response (that comes later)
+- Do NOT repeat the prompt instruction
+- For execute_sparql, put the entire SPARQL query as the argument in parentheses
+
+Example:
+Thought: I need to search for the room temperature sensor to find its identifier
+Action: search_brick(room temperature)
+
+Example with SPARQL:
+Thought: I will query for the latest temperature value from the RM_TEMP sensor
+Action: execute_sparql(SELECT ?timesltamp ?value WHERE { bldg:RM_TEMP ref:hasObservation ?obs . ?obs ref:hasTimestamp ?timestamp . ?obs ref:hasValue ?value . } ORDER BY DESC(?timestamp) LIMIT 1)
+
+# input
+{% for i in range(0, conversation_history|length) %}
+User Question: {{ conversation_history[i]["question"] }}
+{% for j in range(0, conversation_history[i]["action_history"]|length) %}
+{{ conversation_history[i]["action_history"][j] }}
+{% endfor %}
+--
+{% endfor %}
+
+User Question: {{ question }}
+
+{% if action_history %}
+{% for i in range(0, action_history|length) %}
+
+{{ action_history[i] }}
+{% endfor %}
+{% endif %}
+
+Output one "Thought" and one "Action":

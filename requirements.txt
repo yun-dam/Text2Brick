@@ -1,0 +1,17 @@
+# Requirements for Brick Agent Framework
+# Python 3.10+ recommended
+
+# Core dependencies
+pandas>=2.0.0
+rdflib>=7.0.0
+
+# Google Cloud / Vertex AI for Gemini 2.5 Flash
+google-cloud-aiplatform>=1.38.0
+vertexai>=1.38.0
+
+# Optional but recommended
+numpy>=1.24.0
+
+# Development dependencies (optional)
+ipython>=8.0.0
+jupyter>=1.0.0
