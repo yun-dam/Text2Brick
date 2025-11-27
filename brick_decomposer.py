@@ -62,21 +62,16 @@ class BrickQueryDecomposer:
     This preprocessing step helps the main agent generate better SPARQL queries.
     """
 
-    def __init__(self, model: str = "gemini-2.0-flash-exp", project: str = None):
+    def __init__(self, model: str = "gemini-2.0-flash-exp", project: str = "cs224v-yundamko"):
         """
         Initialize the decomposer.
 
         Args:
             model: Gemini model to use
-            project: GCP project ID (defaults to GOOGLE_CLOUD_PROJECT env var)
+            project: GCP project ID
         """
-        import os
-
         self.model_name = model
-        self.project = project or os.environ.get("GOOGLE_CLOUD_PROJECT")
-
-        if not self.project:
-            print("⚠️  WARNING: No GCP project ID specified for decomposer. Set GOOGLE_CLOUD_PROJECT environment variable or pass project parameter.")
+        self.project = project
 
     def should_decompose(self, question: str) -> bool:
         """
@@ -190,8 +185,6 @@ class BrickQueryDecomposer:
             time.sleep(6.5)
 
             # Initialize Vertex AI
-            if not self.project:
-                raise ValueError("GCP project ID not configured. Set GOOGLE_CLOUD_PROJECT environment variable or pass project to BrickQueryDecomposer constructor.")
             vertexai.init(project=self.project, location="us-central1")
 
             # Load prompt template

@@ -228,18 +228,21 @@ class BrickGraph:
         return (None, None)
 
 
-def execute_sparql(query: str, return_status: bool = False, timeout: int = 30):
+def execute_sparql(query: str, return_status: bool = False, timeout: int = 60):
     """
-    Execute a SPARQL query on the Brick graph.
+    Execute a SPARQL query on the Brick graph with timeout enforcement.
 
     Args:
         query: SPARQL query string
         return_status: If True, return (results, status) tuple
-        timeout: Query timeout in seconds
+        timeout: Query timeout in seconds (default: 60 seconds = 1 minute)
 
     Returns:
         Query results or (results, status) tuple if return_status=True
     """
+    import time
+    import threading
+
     try:
         graph = BrickGraph().get_graph()
 
@@ -247,19 +250,63 @@ def execute_sparql(query: str, return_status: bool = False, timeout: int = 30):
         if "PREFIX" not in query.upper():
             query = BRICK_PREFIXES + query
 
-        results = graph.query(query)
+        # Log query execution start
+        query_preview = query[:150].replace('\n', ' ') + "..." if len(query) > 150 else query.replace('\n', ' ')
+        print(f"[SPARQL] Executing query: {query_preview}")
+        print(f"[SPARQL] Graph size: {len(graph)} triples")
+        print(f"[SPARQL] Timeout: {timeout} seconds")
 
-        # Convert results to list of dicts
-        result_list = []
-        for row in results:
-            row_dict = {}
-            for var in results.vars:
-                value = row[var]
-                if value is not None:
-                    row_dict[str(var)] = {"value": str(value)}
-            if row_dict:
-                result_list.append(row_dict)
+        start_time = time.time()
+        print(f"[SPARQL] Query started at {time.strftime('%H:%M:%S')}")
 
+        # Execute query in a separate thread with timeout
+        query_result = [None]
+        query_exception = [None]
+
+        def run_query():
+            try:
+                query_result[0] = graph.query(query)
+            except Exception as e:
+                query_exception[0] = e
+
+        query_thread = threading.Thread(target=run_query, daemon=True)
+        query_thread.start()
+        query_thread.join(timeout=timeout)
+
+        execution_time = time.time() - start_time
+
+        # Check if query timed out
+        if query_thread.is_alive():
+            print(f"[SPARQL] ❌ Query TIMEOUT after {timeout} seconds!")
+            print(f"[SPARQL] The query is too complex or the graph is too large.")
+            print(f"[SPARQL] Consider adding LIMIT clauses or simplifying the query.")
+
+            status = SparqlExecutionStatus.TIMED_OUT
+            if return_status:
+                return [], status
+            return []
+
+        # Check if query raised an exception
+        if query_exception[0]:
+            raise query_exception[0]
+
+        results = query_result[0]
+        print(f"[SPARQL] Query completed in {execution_time:.2f} seconds")
+
+        # Convert results to simple list of dicts (optimized - no unnecessary nesting)
+        print(f"[SPARQL] Converting results to list...")
+        start_convert = time.time()
+
+        # Fast list comprehension - simple flat structure
+        result_list = [
+            {str(var): str(row[var]) for var in results.vars if row[var] is not None}
+            for row in results
+        ]
+        # Remove empty dicts
+        result_list = [r for r in result_list if r]
+
+        convert_time = time.time() - start_convert
+        print(f"[SPARQL] Converted {len(result_list)} results in {convert_time:.2f}s")
         status = SparqlExecutionStatus.SUCCESS if result_list else SparqlExecutionStatus.EMPTY_RESULT
 
         if return_status:
@@ -275,7 +322,7 @@ def execute_sparql(query: str, return_status: bool = False, timeout: int = 30):
         else:
             status = SparqlExecutionStatus.OTHER_ERROR
 
-        print(f"SPARQL execution error: {e}")
+        print(f"[SPARQL] ❌ Execution error: {e}")
 
         if return_status:
             return [], status

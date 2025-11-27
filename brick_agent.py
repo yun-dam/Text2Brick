@@ -103,15 +103,8 @@ class BrickSparqlQuery:
         if not self.execution_result:
             return "No results"
 
-        # Convert to DataFrame for nice formatting
-        formatted_data = []
-        for row in self.execution_result:
-            formatted_row = {}
-            for key, val in row.items():
-                formatted_row[key] = val.get('value', str(val))
-            formatted_data.append(formatted_row)
-
-        df = pd.DataFrame(formatted_data)
+        # Results are already in simple dict format, convert directly to DataFrame
+        df = pd.DataFrame(self.execution_result)
 
         if len(df) > max_rows:
             # Show first and last rows
@@ -168,7 +161,7 @@ class BrickAgent:
     Main agent class that implements the iterative approach for Brick SPARQL generation.
     """
 
-    def __init__(self, engine: str = "gemini-flash", use_decomposer: bool = True, use_temporal_handler: bool = True, use_fewshot: bool = False, ttl_schema_file: str = None, gcp_project_id: str = None, gcp_location: str = "us-central1"):
+    def __init__(self, engine: str = "gemini-flash", use_decomposer: bool = True, use_temporal_handler: bool = True, use_fewshot: bool = False, ttl_schema_file: str = None):
         """
         Initialize the agent.
 
@@ -178,11 +171,7 @@ class BrickAgent:
             use_temporal_handler: If True, apply temporal constraints separately after SPARQL generation
             use_fewshot: If True, include few-shot examples in the controller prompt
             ttl_schema_file: Path to .ttl schema file to include in prompt (optional)
-            gcp_project_id: Google Cloud project ID (defaults to GOOGLE_CLOUD_PROJECT env var)
-            gcp_location: Google Cloud location (default: us-central1)
         """
-        import os
-
         self.engine = engine
         self.brick_graph = BrickGraph()
         self.use_decomposer = use_decomposer
@@ -191,16 +180,9 @@ class BrickAgent:
         self.ttl_schema_file = ttl_schema_file
         self.ttl_schema_content = None
 
-        # Get GCP project ID from parameter or environment variable
-        self.gcp_project_id = gcp_project_id or os.environ.get("GOOGLE_CLOUD_PROJECT")
-        self.gcp_location = gcp_location
-
-        if not self.gcp_project_id:
-            print("⚠️  WARNING: No GCP project ID specified. Set GOOGLE_CLOUD_PROJECT environment variable or pass gcp_project_id parameter.")
-
         # Initialize decomposer
         if use_decomposer:
-            self.decomposer = BrickQueryDecomposer(project=self.gcp_project_id)
+            self.decomposer = BrickQueryDecomposer()
             print("✅ Query decomposer initialized")
         else:
             self.decomposer = None
@@ -255,7 +237,7 @@ class BrickAgent:
         self.dataset_date_range = (None, None)
         self.dataset_year = None
 
-    def initialize_graph(self, ttl_file: str = None, csv_file: str = None, max_csv_rows: int = 100, use_cache: bool = True):
+    def initialize_graph(self, ttl_file: str = None, csv_file: str = None, max_csv_rows: int = 100, use_cache: bool = False):
         """
         Initialize the Brick graph with data.
 
@@ -263,7 +245,7 @@ class BrickAgent:
             ttl_file: Path to Turtle file with Brick schema
             csv_file: Path to CSV file with timeseries data
             max_csv_rows: Maximum rows to load from CSV
-            use_cache: If True, try to load from cache first (default: True)
+            use_cache: If True, try to load from cache first (default: False - always rebuild)
         """
         import os
 
@@ -279,19 +261,16 @@ class BrickAgent:
                 return
 
         # Cache not available or disabled, build from scratch
-        print("🔨 Building graph from scratch...")
+        print("🔨 Building graph from scratch (cache disabled)...")
         self.brick_graph.initialize(ttl_file=ttl_file)
 
         if csv_file:
             self.brick_graph.add_timeseries_data(csv_file, max_rows=max_csv_rows)
 
-        # Always save to cache after building (even if use_cache was False for forcing rebuild)
-        print(f"\n💾 Saving graph to cache for faster loading next time...")
-        self.brick_graph.save_graph(cache_file)
-        print(f"💡 Next time, graph will load instantly from {cache_file}!")
-
         # Get date range after building
         self._extract_date_metadata()
+
+        print(f"✅ Graph built successfully with {max_csv_rows} rows of data")
 
     def _extract_date_metadata(self):
         """Extract and store date metadata from the dataset"""
@@ -325,12 +304,12 @@ class BrickAgent:
             import time
 
             # Rate limiting: Add delay to avoid 429 errors
-            time.sleep(6.5)  # 6.5 second delay between API calls (max 9 calls/min for 10/min quota)
+            time.sleep(6)  # 1 second delay between API calls
 
-            # Initialize Vertex AI
-            if not self.gcp_project_id:
-                raise ValueError("GCP project ID not configured. Set GOOGLE_CLOUD_PROJECT environment variable or pass gcp_project_id to BrickAgent constructor.")
-            vertexai.init(project=self.gcp_project_id, location=self.gcp_location)
+            # Initialize Vertex AI - get project from environment or use default
+            import os
+            project_id = os.getenv("GOOGLE_CLOUD_PROJECT", "cs224v-yundamko")
+            vertexai.init(project=project_id, location="us-central1")
 
             # Build prompt from template
             action_history_str = "\n\n".join([
@@ -590,8 +569,10 @@ Query Decomposition (use this to guide your actions):
             fixed += ' LIMIT 1'
             print(f"[INFO] Auto-added 'LIMIT 1' to query with ORDER BY DESC")
 
-        # Fix 3: DISABLED - No longer auto-adding LIMIT 10
-        # Users want full result sets without automatic limiting
+        # Fix 3: Add LIMIT 10 to all queries without LIMIT (prevent huge result sets)
+        if not re.search(r'LIMIT\s+\d+', fixed, re.IGNORECASE):
+            fixed += ' LIMIT 10'
+            print(f"[INFO] Auto-added 'LIMIT 10' to query (prevents slow execution)")
 
         if fixed != original:
             print(f"[INFO] SPARQL auto-corrected:")
@@ -730,6 +711,8 @@ Output one "Thought" and one "Action":
                     action.observation = "No examples found"
 
             elif action.action_name == "execute_sparql":
+                print(f"\n[EXECUTE_SPARQL] Starting SPARQL query execution...")
+
                 # Validate and fix SPARQL before execution
                 corrected_sparql = self._validate_and_fix_sparql(action.action_argument)
 
@@ -923,8 +906,8 @@ if __name__ == "__main__":
     print("\nLoading Brick schema and timeseries data...")
     agent.initialize_graph(
         ttl_file="LBNL_FDD_Data_Sets_FCU_ttl.ttl",
-        csv_file="LBNL_FDD_Dataset_FCU/FCU_FaultFree.csv",
-        max_csv_rows=1000  # Load last 1000 rows (most recent data from Dec 2018)
+        csv_file="LBNL_FDD_Dataset_FCU/FCU_FaultFree_hourly.csv",  # Using 1-hour interval data
+        max_csv_rows=8760  # Load all hourly data (8760 hours in a year)
     )
     print("Data loaded successfully!\n")
 
