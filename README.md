@@ -322,7 +322,7 @@ Contributions are welcome! Areas for improvement:
 
 If you use this work, please cite:
 ```
-[Add citation information if applicable]
+TBD
 ```
 
 ## Acknowledgments
