@@ -20,6 +20,7 @@ Examples:
   python run_single_difficulty.py easy --fewshot
   python run_single_difficulty.py easy --skip 3
   python run_single_difficulty.py easy --skip 1,3,5
+  python run_single_difficulty.py easy --only 1,2,3,4,5
   python run_single_difficulty.py easy --no-temporal
   python run_single_difficulty.py advanced --fewshot --skip 2 --no-temporal
         """
@@ -42,6 +43,13 @@ Examples:
         type=str,
         default="",
         help="Comma-separated list of question numbers to skip (e.g., '3' or '1,3,5')"
+    )
+
+    parser.add_argument(
+        "--only",
+        type=str,
+        default="",
+        help="Comma-separated list of question numbers to run (e.g., '1,2,3,4,5')"
     )
 
     parser.add_argument(
@@ -70,7 +78,9 @@ Examples:
         print(f"Temporal: DISABLED (no temporal patterns)")
     else:
         print(f"Temporal: ENABLED (using temporal patterns)")
-    if args.skip:
+    if args.only:
+        print(f"Running only questions: {args.only}")
+    elif args.skip:
         print(f"Skipping questions: {args.skip}")
     print(f"{'='*80}\n")
 
@@ -99,9 +109,18 @@ Examples:
     print(f"[3/3] Parsing {difficulty} questions...")
     all_questions = runner.parse_question_file(question_files[difficulty])
 
-    # Filter out skipped questions
-    skip_numbers = []
-    if args.skip:
+    # Validate that --skip and --only are not used together
+    if args.skip and args.only:
+        print("ERROR: Cannot use both --skip and --only flags together")
+        sys.exit(1)
+
+    # Filter questions based on --skip or --only
+    if args.only:
+        only_numbers = [int(x.strip()) for x in args.only.split(',') if x.strip()]
+        print(f"  Running only questions: {only_numbers}")
+        # Question numbers are 1-indexed, list indices are 0-indexed
+        questions = [q for i, q in enumerate(all_questions, start=1) if i in only_numbers]
+    elif args.skip:
         skip_numbers = [int(x.strip()) for x in args.skip.split(',') if x.strip()]
         print(f"  Skipping questions: {skip_numbers}")
         # Question numbers are 1-indexed, list indices are 0-indexed
