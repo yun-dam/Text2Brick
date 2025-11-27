@@ -168,7 +168,7 @@ class BrickAgent:
     Main agent class that implements the iterative approach for Brick SPARQL generation.
     """
 
-    def __init__(self, engine: str = "gemini-flash", use_decomposer: bool = True, use_temporal_handler: bool = True, use_fewshot: bool = False, ttl_schema_file: str = None):
+    def __init__(self, engine: str = "gemini-flash", use_decomposer: bool = True, use_temporal_handler: bool = True, use_fewshot: bool = False, ttl_schema_file: str = None, gcp_project_id: str = None, gcp_location: str = "us-central1"):
         """
         Initialize the agent.
 
@@ -178,7 +178,11 @@ class BrickAgent:
             use_temporal_handler: If True, apply temporal constraints separately after SPARQL generation
             use_fewshot: If True, include few-shot examples in the controller prompt
             ttl_schema_file: Path to .ttl schema file to include in prompt (optional)
+            gcp_project_id: Google Cloud project ID (defaults to GOOGLE_CLOUD_PROJECT env var)
+            gcp_location: Google Cloud location (default: us-central1)
         """
+        import os
+
         self.engine = engine
         self.brick_graph = BrickGraph()
         self.use_decomposer = use_decomposer
@@ -187,9 +191,16 @@ class BrickAgent:
         self.ttl_schema_file = ttl_schema_file
         self.ttl_schema_content = None
 
+        # Get GCP project ID from parameter or environment variable
+        self.gcp_project_id = gcp_project_id or os.environ.get("GOOGLE_CLOUD_PROJECT")
+        self.gcp_location = gcp_location
+
+        if not self.gcp_project_id:
+            print("⚠️  WARNING: No GCP project ID specified. Set GOOGLE_CLOUD_PROJECT environment variable or pass gcp_project_id parameter.")
+
         # Initialize decomposer
         if use_decomposer:
-            self.decomposer = BrickQueryDecomposer()
+            self.decomposer = BrickQueryDecomposer(project=self.gcp_project_id)
             print("✅ Query decomposer initialized")
         else:
             self.decomposer = None
@@ -317,7 +328,9 @@ class BrickAgent:
             time.sleep(6.5)  # 6.5 second delay between API calls (max 9 calls/min for 10/min quota)
 
             # Initialize Vertex AI
-            vertexai.init(project="cs224v-yundamko", location="us-central1")
+            if not self.gcp_project_id:
+                raise ValueError("GCP project ID not configured. Set GOOGLE_CLOUD_PROJECT environment variable or pass gcp_project_id to BrickAgent constructor.")
+            vertexai.init(project=self.gcp_project_id, location=self.gcp_location)
 
             # Build prompt from template
             action_history_str = "\n\n".join([

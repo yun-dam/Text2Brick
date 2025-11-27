@@ -19,7 +19,7 @@ Text2Brick is an iterative agent-based system that translates natural language q
 
 - Python 3.10+
 - Google Cloud account with Vertex AI access
-- Google Cloud project ID (configured in `brick_agent.py:320`)
+- Google Cloud project with Vertex AI API enabled
 
 ### Installation
 
@@ -30,6 +30,14 @@ cd Text2Brick
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Configure Google Cloud credentials
+gcloud auth application-default login
+
+# Set your GCP project ID (required)
+export GOOGLE_CLOUD_PROJECT="your-gcp-project-id"
+# On Windows:
+# set GOOGLE_CLOUD_PROJECT=your-gcp-project-id
 ```
 
 ### Test a Single Question
@@ -185,14 +193,28 @@ Each run generates detailed logs in the `logs/` directory:
 
 ### Google Cloud Setup
 
-1. Update your GCP project ID in `brick_agent.py` line 320:
-```python
-vertexai.init(project="your-project-id", location="us-central1")
+The system uses environment variables for configuration. You have two options:
+
+**Option 1: Environment Variable (Recommended)**
+```bash
+# Set the environment variable
+export GOOGLE_CLOUD_PROJECT="your-gcp-project-id"
+
+# On Windows:
+set GOOGLE_CLOUD_PROJECT=your-gcp-project-id
+
+# Authenticate with Google Cloud
+gcloud auth application-default login
 ```
 
-2. Authenticate with Google Cloud:
-```bash
-gcloud auth application-default login
+**Option 2: Pass Project ID in Code**
+```python
+from brick_agent import BrickAgent
+
+agent = BrickAgent(
+    gcp_project_id="your-gcp-project-id",
+    gcp_location="us-central1"  # Optional, defaults to us-central1
+)
 ```
 
 ### Caching
@@ -217,10 +239,23 @@ This starts a session where you can ask multiple questions sequentially.
 
 ```python
 from brick_agent import BrickAgent
+import os
 
-# Initialize agent
+# Option 1: Use environment variable (recommended)
+os.environ["GOOGLE_CLOUD_PROJECT"] = "your-gcp-project-id"
+
 agent = BrickAgent(
     engine="gemini-flash",
+    use_decomposer=True,
+    use_temporal_handler=True,
+    use_fewshot=True
+)
+
+# Option 2: Pass project ID directly
+agent = BrickAgent(
+    engine="gemini-flash",
+    gcp_project_id="your-gcp-project-id",
+    gcp_location="us-central1",
     use_decomposer=True,
     use_temporal_handler=True,
     use_fewshot=True
@@ -244,6 +279,12 @@ if final_sparql and final_sparql.has_results():
 ## Troubleshooting
 
 ### Common Issues
+
+**Issue**: `GCP project ID not configured` error
+- **Solution**: Set the `GOOGLE_CLOUD_PROJECT` environment variable or pass `gcp_project_id` parameter to `BrickAgent()`.
+  ```bash
+  export GOOGLE_CLOUD_PROJECT="your-project-id"
+  ```
 
 **Issue**: `429 Too Many Requests` error
 - **Solution**: The system includes rate limiting (6.5s delay + 60s cooldown). Ensure you're not hitting quota limits.
