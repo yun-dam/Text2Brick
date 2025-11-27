@@ -1,0 +1,96 @@
+BRICK Data Evaluation Questions - FCU Sensors Dataset
+=====================================================
+
+Basic Temporal Questions (latest/recent/first):
+-----------------------------------------------
+1. What is the latest room temperature reading?
+
+2. Show me the 10 most recent outdoor air humidity measurements.
+
+3. Get the discharge air temperature over the last 20 readings.
+
+4. What were the cooling and heating valve positions in the most recent observation?
+
+5. Show me the first 15 fan speed readings.
+
+6. What is the current water flow rate for the heating coil?
+
+7. Display the 10 latest mixed air damper position values.
+
+8. Show me the trend of return air temperature over the last 50 readings.
+
+9. What are the most recent cooling coil entering and return water temperatures?
+
+10. Get the room temperature and both setpoints (heating and cooling) for the last 5 readings.
+
+
+Specific Date/Time Questions:
+-----------------------------
+11. What was the room temperature on December 28th?
+
+12. Show me the outdoor air temperature on Dec 26.
+
+13. Get the fan speed readings at 2pm on December 30th.
+
+14. What was the discharge air humidity between 3pm and 7pm on December 27th?
+
+15. Show me the cooling valve position on December 29th at 10am.
+
+16. What were the heating coil water flow rates on December 25th?
+
+17. Get the mixed air temperature between 9am and 12pm on December 31st.
+
+18. Show me all temperature sensors (discharge, return, mixed air) at 5pm on December 24th.
+
+19. What was the outdoor air humidity on December 26th between 1pm and 4pm?
+
+20. Get the room temperature and setpoints on December 30th at 8am.
+
+21. Show me the return air temperature on December 27th from 6pm to 9pm.
+
+22. What were the cooling and heating valve positions on December 25th at noon?
+
+23. Get the fan power consumption on December 29th between 2pm and 6pm.
+
+24. Show me the discharge air flow rate on December 28th at 3:30pm.
+
+25. What was the mixed air damper position on December 31st from 10am to 2pm?
+
+26. Get all humidity readings (mixed, outdoor, discharge, return air) on December 24th at 3:23pm.
+
+27. Show me the heating coil entering and return water temperatures on December 26th at 7am.
+
+28. What was the outdoor air flow rate between 8am and 10am on December 30th?
+
+29. Get the cooling coil water temperatures on December 27th at 4pm.
+
+30. Show me the FCU control mode and fan operation mode on December 29th from 5pm to 8pm.
+
+31. What was the return air humidity on December 25th at 11am?
+
+32. Show me the cooling valve command signal on December 31st between 1pm and 5pm?
+
+33. Get the heating coil entering water temperature on December 28th at 9:30am.
+
+34. What was the mixed air humidity on December 24th from 7am to 11am?
+
+35. Show me the discharge air flow rate on December 26th at 6pm.
+
+36. Get the heating valve command signal on December 30th between 3pm and 7pm.
+
+37. What was the outdoor air flow rate on December 27th at 4:45pm?
+
+38. Show me the return air temperature on December 29th from 10am to 1pm.
+
+39. Get the fan operation mode on December 25th between 2pm and 4pm.
+
+40. What was the damper command signal on December 31st at 8:30am?
+
+
+Notes:
+------
+- Questions 1-10: Basic temporal constraints (latest, most recent, last N, first N, current)
+- Questions 11-40: Specific dates and times in the last week of December (Dec 24-31)
+- Covers diverse sensors across temperature, humidity, valves, fan, flow rates, dampers, and control modes
+- Temporal patterns include: specific dates, specific times, time ranges
+- Total: 40 questions matching the advanced set
