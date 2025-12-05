@@ -95,16 +95,139 @@ python run_single_question.py "What was the average outdoor air temperature in N
 python run_single_question.py "Show me room temperature over time" --fewshot
 ```
 
+## Running Evaluations
+
+The framework includes evaluation scripts for systematic testing across multiple difficulty levels.
+
+### Evaluation Question Files
+
+Evaluation questions are organized by difficulty:
+- `evaluation_questions_easy.txt` - Basic queries (latest values, simple filters)
+- `evaluation_questions_advanced.txt` - Moderate complexity (aggregations, time ranges)
+- `evaluation_questions_expert.txt` - Complex queries (multiple joins, advanced temporal)
+
+### Single Difficulty Evaluation
+
+Use `run_single_difficulty.py` to run evaluation on a specific difficulty level:
+
+```bash
+# Basic usage - run easy difficulty
+python run_single_difficulty.py easy
+
+# Run with few-shot examples
+python run_single_difficulty.py easy --fewshot
+
+# Run advanced difficulty
+python run_single_difficulty.py advanced
+
+# Skip specific questions (by question number)
+python run_single_difficulty.py easy --skip 3
+python run_single_difficulty.py easy --skip 1,3,5
+
+# Run only specific questions
+python run_single_difficulty.py easy --only 1,2,3,4,5
+
+# Disable temporal pattern handling
+python run_single_difficulty.py easy --no-temporal
+
+# Combine multiple options
+python run_single_difficulty.py advanced --fewshot --skip 2 --no-temporal
+```
+
+### Evaluation Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `difficulty` | Difficulty level: `easy`, `advanced`, or `expert` (required) | - |
+| `--fewshot` | Enable few-shot examples | Disabled |
+| `--skip` | Comma-separated question numbers to skip | None |
+| `--only` | Comma-separated question numbers to run | None |
+| `--no-temporal` | Disable temporal pattern handling | Enabled |
+
+### Full Evaluation
+
+Use `run_evaluation.py` to run evaluation across all difficulty levels:
+
+```bash
+python run_evaluation.py
+```
+
+This will:
+- Run all questions from easy, advanced, and expert levels
+- Include 60-second cooldown between questions to manage API quotas
+- Save detailed results to `evaluation_results/evaluation_results_YYYYMMDD_HHMMSS.json`
+
+### Evaluation Results
+
+Each evaluation generates a JSON file with detailed metrics:
+
+```json
+{
+  "summary": {
+    "timestamp": "2025-12-04T10:30:00",
+    "total_questions": 15,
+    "difficulty_breakdown": {
+      "easy": {
+        "total": 5,
+        "success": 4,
+        "no_results": 1,
+        "error": 0,
+        "avg_execution_time": 12.5,
+        "avg_iterations": 5.2
+      }
+    }
+  },
+  "results": {
+    "easy": [
+      {
+        "question_id": 1,
+        "question": "What is the latest room temperature?",
+        "status": "success",
+        "execution_time_seconds": 12.5,
+        "num_iterations": 5,
+        "actions": [...],
+        "generated_sparqls": [...],
+        "final_sparql": "PREFIX brick: ...",
+        "final_results": [...]
+      }
+    ]
+  }
+}
+```
+
+### Evaluation Outputs
+
+Results are organized by configuration:
+```
+evaluation_results/
+├── easy/
+│   ├── fewshot/
+│   │   └── evaluation_results_YYYYMMDD_HHMMSS.json
+│   └── no_fewshot/
+│       └── evaluation_results_YYYYMMDD_HHMMSS.json
+├── advanced/
+│   └── fewshot/
+│       └── evaluation_results_YYYYMMDD_HHMMSS.json
+└── expert/
+    └── no_fewshot/
+        └── evaluation_results_YYYYMMDD_HHMMSS.json
+```
+
 ## Project Structure
 
 ```
 Text2Brick/
-├── brick_agent.py              # Main agent class and orchestration
-├── brick_decomposer.py         # Query decomposition logic
-├── brick_temporal_handler.py   # Temporal constraint handling
-├── brick_utils.py              # Brick schema utilities
-├── run_single_question.py      # Single question evaluation CLI
-├── prompts/                    # Prompt templates
+├── brick_agent.py                       # Main agent class and orchestration
+├── brick_decomposer.py                  # Query decomposition logic
+├── brick_temporal_handler.py            # Temporal constraint handling
+├── brick_utils.py                       # Brick schema utilities
+├── run_single_question.py               # Single question evaluation CLI
+├── run_single_difficulty.py             # Single difficulty evaluation script
+├── run_evaluation.py                    # Full evaluation across all difficulties
+├── evaluation_questions_easy.txt        # Easy difficulty evaluation questions
+├── evaluation_questions_advanced.txt    # Advanced difficulty evaluation questions
+├── evaluation_questions_expert.txt      # Expert difficulty evaluation questions
+├── prompts/                             # Prompt templates
 │   ├── brick_controller.prompt
 │   ├── brick_decomposition.prompt
 │   ├── brick_temporal_patterns.txt
@@ -113,8 +236,9 @@ Text2Brick/
 ├── LBNL_FDD_Data_Sets_FCU_ttl.ttl       # Brick schema (FCU dataset)
 ├── LBNL_FDD_Dataset_FCU/                # Timeseries data
 │   └── FCU_FaultFree.csv
-├── requirements.txt            # Python dependencies
-└── logs/                       # Auto-generated execution logs
+├── requirements.txt                     # Python dependencies
+├── logs/                                # Auto-generated execution logs
+└── evaluation_results/                  # Evaluation results by difficulty
 ```
 
 ## How It Works
