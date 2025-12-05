@@ -1,0 +1,111 @@
+BRICK Data Advanced Evaluation Questions - FCU Sensors Dataset
+================================================================
+
+Complex Questions with Aggregations, Conditions, and Comparisons:
+-----------------------------------------------------------------
+
+1. Show me when the FCU was in cooling mode in the last 20 readings.
+
+2. Find periods when room temperature exceeded the cooling setpoint.
+
+3. What is the average cooling valve position when the FCU is operating in December?
+
+4. Calculate the temperature difference between room and discharge air in the last 10 readings.
+
+5. Show me how many days in November both heating and cooling valves were active simultaneously.
+
+6. What are the min, max, and average values for all air temperature sensors?
+
+7. Show me readings where the fan was running but both valves were closed.
+
+8. Find when room temperature was in the deadband between heating and cooling setpoints.
+
+9. Compare cooling water flow rate with valve position for the last 20 readings.
+
+10. What is the average outdoor air humidity when the damper position is above 50% on October 15th?
+
+11. Find the maximum discharge air temperature on January 10th between 2pm and 6pm.
+
+12. Show me the correlation between fan speed and fan power consumption for the last 50 readings.
+
+13. Calculate the average temperature difference between entering and return water for the heating coil on December 5th.
+
+14. Find periods on November 20th when mixed air humidity exceeded outdoor air humidity.
+
+15. What is the minimum room temperature when the heating valve was fully closed in the last 100 readings?
+
+16. Show me all readings on March 15th from 9am to 5pm where discharge air flow exceeded 500 CFM.
+
+17. Calculate the average cooling coil entering water temperature when the cooling valve is above 75% on July 25th.
+
+18. Find when the return air temperature was higher than the mixed air temperature on September 10th.
+
+19. What is the total fan power consumption between 6am and 8pm on August 12th?
+
+20. Show me readings where outdoor air temperature was below 32°F but the FCU was still operating on February 1st.
+
+21. Calculate the average damper position when outdoor air flow rate is non-zero in the last 30 readings.
+
+22. Find the maximum temperature difference between cooling coil entering and return water on June 5th at 3pm.
+
+23. Show me periods on December 20th when the FCU control mode changed from operate to setback.
+
+24. What is the average room temperature deviation from the heating setpoint on cold days in January?
+
+25. Find readings between 1pm and 4pm on May 18th where all four humidity sensors show values above 60%.
+
+26. Calculate the ratio of outdoor air flow to discharge air flow when the damper is fully open on April 8th.
+
+27. Show me the minimum and maximum fan speed on November 5th when the FCU was in operate mode.
+
+28. Find periods on October 30th from 8am to noon when heating valve position exceeded cooling valve position.
+
+29. What is the average discharge air temperature when both the fan is running and cooling valve is active on July 4th?
+
+30. Show me readings where room temperature setpoint violations occurred for more than 30 minutes on December 15th.
+
+31. Calculate the energy efficiency ratio (cooling delivered vs fan power) for the last 20 readings.
+
+32. Find when the mixed air damper command signal differed from the actual damper position on September 22nd.
+
+33. What is the average heating coil water flow rate when outdoor temperature is below 40°F in December?
+
+34. Show me all readings on March 8th between 10am and 2pm where return air humidity was lowest among all humidity sensors.
+
+35. Calculate the simultaneous operation time of heating and cooling systems on February 28th.
+
+36. Find the peak outdoor air temperature and corresponding indoor conditions on August 20th between 12pm and 6pm.
+
+37. What is the average valve response time (difference between command and position) in the last 50 readings?
+
+38. Show me periods on November 12th when the FCU was operating but fan speed was zero.
+
+39. Calculate the average temperature stratification (difference between discharge and return air) on January 25th from 6pm to 10pm.
+
+40. Find readings where cooling was active despite room temperature being below the cooling setpoint on June 10th.
+
+
+Question Categories:
+-------------------
+- Mode Detection: 1, 7, 13, 23, 27, 38
+- Setpoint Analysis: 2, 8, 24, 30, 40
+- Aggregations (avg/min/max): 3, 6, 10, 11, 15, 17, 19, 21, 24, 27, 29, 33, 37, 39
+- Temperature Differences: 4, 13, 18, 22, 39
+- Simultaneous Conditions: 5, 16, 25, 35
+- Flow/Valve Comparisons: 9, 26, 32, 37
+- Humidity Analysis: 10, 14, 25, 34
+- Efficiency/Energy: 12, 19, 31
+- Time-based Counts: 5, 30, 35
+- Fault Detection: 7, 20, 32, 38, 40
+- Multi-sensor Comparisons: 14, 18, 34, 36
+
+Sensors Coverage:
+----------------
+Temperature: RM_TEMP, FCU_OAT, FCU_DAT, FCU_RAT, FCU_MAT, FCU_CLG_EWT, FCU_CLG_RWT, FCU_HTG_EWT, FCU_HTG_RWT
+Humidity: FCU_MA_HUMD, FCU_OA_HUMD, FCU_DA_HUMD, FCU_RA_HUMD
+Valves: FCU_CVLV, FCU_HVLV, FCU_CVLV_DM, FCU_HVLV_DM
+Flow Rates: FCU_CLG_GPM, FCU_HTG_GPM, FCU_DA_CFM, FCU_OA_CFM
+Damper: FCU_DMPR, FCU_DMPR_DM
+Fan: FCU_SPD, FCU_WAT
+Control: FCU_CTRL, FAN_CTRL
+Setpoints: RMCLGSPT, RMHTGSPT
