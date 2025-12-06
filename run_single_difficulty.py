@@ -100,7 +100,7 @@ Examples:
     print("[2/3] Loading Brick schema and timeseries data...")
     agent.initialize_graph(
         ttl_file="LBNL_FDD_Data_Sets_FCU_ttl.ttl",
-        csv_file="LBNL_FDD_Dataset_FCU/FCU_FaultFree_hourly.csv",  # Using 1-hour interval data
+        csv_file="LBNL_FDD_Dataset_FCU/FCU_FaultFree.csv",
         max_csv_rows=168  # Load all hourly data (8760 hours in a year)
     )
     print("✅ Data loaded successfully!")
